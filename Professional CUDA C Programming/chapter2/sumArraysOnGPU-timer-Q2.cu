@@ -53,7 +53,11 @@ void sumArrayOnHost(float *A, float *B, float *C, const int N)
 __global__ void sumArraysOnGPU(float* A, float* B, float*C, const int N)
 {
     int i = blockIdx.x * blockDim.x + threadIdx.x;  
-    if (i < N) C[i] = A[i] + B[i]; 
+    if (i < N) 
+    {
+        C[i] = A[i] + B[i]; 
+        C[i+N] = A[i+N] + B[i+N]; 
+    }
 }
 
 int main(int argc, char** argv)
@@ -93,17 +97,13 @@ int main(int argc, char** argv)
     cudaMemcpy(d_B, h_B, nBytes, cudaMemcpyHostToDevice); 
 
     // invoke kernel at host side 
-    /* 
-    block.x = 1023, grid.x = 16401 比数据的个数多 1007
-    block.y = 1024, grid.y = 16384 正好等于数据的个数 16777216  
-    */
-    int iLen = 1024; 
+    int iLen = 256; 
     dim3 block (iLen); 
-    dim3 grid ((nElem + block.x - 1) / block.x);  
+    dim3 grid ((nElem + block.x - 1) / (block.x * 2));  
 
     double iStart, iElaps; 
     iStart = cpuSecond(); 
-    sumArraysOnGPU <<<grid, block>>> (d_A, d_B, d_C, nElem); 
+    sumArraysOnGPU <<<grid, block>>> (d_A, d_B, d_C, nElem / 2); 
     cudaDeviceSynchronize(); 
     iElaps = cpuSecond() - iStart; 
     printf("SumArraysOnGPU<<<%d,%d>>>, time elapsed %f sec\n", grid.x, block.x, iElaps); 
